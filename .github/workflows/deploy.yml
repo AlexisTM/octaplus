@@ -1,0 +1,78 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Refresh after the ~14:30 CET day-ahead publication. GitHub auto-disables
+    # this after 60 days without repo activity; workflow_dispatch re-enables it.
+    - cron: "0 16 * * *"
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            js/package-lock.json
+            web/package-lock.json
+
+      - run: npm ci
+        working-directory: js
+
+      - run: npm ci
+        working-directory: web
+
+      - name: Refresh dataset snapshot
+        # Best effort: on failure the committed snapshot is served instead.
+        continue-on-error: true
+        run: node scripts/download-dataset.mjs
+
+      - name: Verify snapshots are present and non-empty
+        run: |
+          node -e '
+            for (const f of ["web/public/data/hour.json", "web/public/data/quarter_hour.json"]) {
+              const { days } = JSON.parse(require("node:fs").readFileSync(f, "utf8"));
+              if (!Array.isArray(days) || days.length === 0) throw new Error(f + ": empty snapshot");
+            }
+          '
+
+      - run: npm test
+        working-directory: js
+
+      - run: npm test
+        working-directory: web
+
+      - run: npm run build
+        working-directory: web
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

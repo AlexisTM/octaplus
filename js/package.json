@@ -1,0 +1,22 @@
+{
+  "name": "octaplus",
+  "version": "0.1.0",
+  "description": "JavaScript SDK for the Octaplus dynamic-tariff quotations API",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

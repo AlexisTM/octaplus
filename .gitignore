@@ -1,4 +1,9 @@
+node_modules/
+dist/
+target/
+__pycache__/
+.venv/
 *.pyc
-__pycache__
-target
 uv.lock
+.DS_Store
+
